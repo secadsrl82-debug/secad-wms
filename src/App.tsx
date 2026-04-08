@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -270,7 +270,6 @@ export default function MiniWmsSecadApp() {
   }, [productionItems, returnSearch]);
 
   const selectedReturnItem = productionItems.find((p) => p.id === returnForm.productionItemId);
-  const returnMeta = parseArticle(returnForm.code || selectedReturnItem?.code || "", articleCatalog);
 
   const kpis = {
     active: pallets.filter((p) => p.qtyResidual > 0).length,
