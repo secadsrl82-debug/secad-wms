@@ -4,13 +4,49 @@ const notion = new Client({
   auth: process.env.NOTION_TOKEN,
 });
 
+function getTitleValue(properties: Record<string, any>) {
+  const titleProp = Object.values(properties).find((prop: any) => prop?.type === "title");
+  return titleProp?.title?.[0]?.plain_text || "";
+}
+
+function getRichText(properties: Record<string, any>, name: string) {
+  const prop = properties[name];
+  if (!prop) return "";
+  if (prop.type === "rich_text") return prop.rich_text?.[0]?.plain_text || "";
+  if (prop.type === "title") return prop.title?.[0]?.plain_text || "";
+  return "";
+}
+
+function getSelect(properties: Record<string, any>, name: string) {
+  const prop = properties[name];
+  if (!prop) return "";
+  if (prop.type === "select") return prop.select?.name || "";
+  if (prop.type === "status") return prop.status?.name || "";
+  if (prop.type === "rich_text") return prop.rich_text?.[0]?.plain_text || "";
+  return "";
+}
+
+function getNumber(properties: Record<string, any>, name: string) {
+  const prop = properties[name];
+  if (!prop) return 0;
+  return prop.type === "number" ? prop.number || 0 : 0;
+}
+
+function getDateValue(properties: Record<string, any>, name: string) {
+  const prop = properties[name];
+  if (!prop) return "";
+  if (prop.type === "date") return prop.date?.start || "";
+  if (prop.type === "created_time") return prop.created_time || "";
+  return "";
+}
+
 export default async function handler(req, res) {
   try {
     const database = await notion.databases.retrieve({
-      database_id: process.env.NOTION_DB_PALLETS,
+      database_id: process.env.NOTION_DB_PALLETS!,
     });
 
-    const dataSourceId = database.data_sources?.[0]?.id;
+    const dataSourceId = (database as any).data_sources?.[0]?.id;
 
     if (!dataSourceId) {
       return res.status(500).json({
@@ -22,20 +58,24 @@ export default async function handler(req, res) {
       data_source_id: dataSourceId,
     });
 
-    const pallets = response.results.map((item: any) => ({
-      id: item.properties["Name"]?.title?.[0]?.plain_text || "",
-      code: item.properties["Codice"]?.rich_text?.[0]?.plain_text || "",
-      description: item.properties["Descrizione"]?.rich_text?.[0]?.plain_text || "",
-      lot: item.properties["Lotto"]?.rich_text?.[0]?.plain_text || "",
-      client: item.properties["Cliente"]?.select?.name || "",
-      supplier: item.properties["Fornitore"]?.select?.name || "",
-      qtyInitial: item.properties["Qta iniziale"]?.number || 0,
-      qtyResidual: item.properties["Qta residua"]?.number || 0,
-      uom: item.properties["UM"]?.select?.name || "",
-      position: item.properties["Posizione"]?.rich_text?.[0]?.plain_text || "",
-      status: item.properties["Stato"]?.select?.name || "",
-      createdAt: item.properties["Data creazione"]?.date?.start || "",
-    }));
+    const pallets = response.results.map((item: any) => {
+      const props = item.properties || {};
+
+      return {
+        id: getTitleValue(props),
+        code: getRichText(props, "Codice"),
+        description: getRichText(props, "Descrizione"),
+        lot: getRichText(props, "Lotto"),
+        client: getSelect(props, "Cliente"),
+        supplier: getSelect(props, "Fornitore"),
+        qtyInitial: getNumber(props, "Qta iniziale"),
+        qtyResidual: getNumber(props, "Qta residua"),
+        uom: getSelect(props, "UM"),
+        position: getRichText(props, "Posizione"),
+        status: getSelect(props, "Stato"),
+        createdAt: getDateValue(props, "Data creazione"),
+      };
+    });
 
     return res.status(200).json(pallets);
   } catch (error: any) {
