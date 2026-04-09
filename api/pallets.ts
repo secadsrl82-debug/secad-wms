@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     });
 
     const pallets = response.results.map((item: any) => ({
-      id: item.properties["ID PALLET"]?.title?.[0]?.plain_text || "",
+      id: item.properties["Name"]?.title?.[0]?.plain_text || "",
       code: item.properties["Codice"]?.rich_text?.[0]?.plain_text || "",
       description: item.properties["Descrizione"]?.rich_text?.[0]?.plain_text || "",
       lot: item.properties["Lotto"]?.rich_text?.[0]?.plain_text || "",
