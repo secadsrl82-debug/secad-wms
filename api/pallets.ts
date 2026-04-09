@@ -6,8 +6,20 @@ const notion = new Client({
 
 export default async function handler(req, res) {
   try {
-    const response = await notion.databases.query({
+    const database = await notion.databases.retrieve({
       database_id: process.env.NOTION_DB_PALLETS,
+    });
+
+    const dataSourceId = database.data_sources?.[0]?.id;
+
+    if (!dataSourceId) {
+      return res.status(500).json({
+        error: "Nessun data source trovato dentro il database Notion.",
+      });
+    }
+
+    const response = await notion.dataSources.query({
+      data_source_id: dataSourceId,
     });
 
     const pallets = response.results.map((item: any) => ({
@@ -25,9 +37,11 @@ export default async function handler(req, res) {
       createdAt: item.properties["Data creazione"]?.date?.start || "",
     }));
 
-    res.status(200).json(pallets);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    return res.status(200).json(pallets);
+  } catch (error: any) {
+    console.error("Errore Notion pallets:", error);
+    return res.status(500).json({
+      error: error?.message || "Errore sconosciuto su Notion",
+    });
   }
 }
